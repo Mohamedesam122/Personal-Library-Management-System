@@ -1,0 +1,487 @@
+import tkinter as tk
+from tkinter import ttk, messagebox, scrolledtext
+import os
+
+
+class Book:
+    next_id=1
+    
+    def __init__(self, title, author, genre, price, publisher_year):
+        self.id = Book.next_id
+        Book.next_id += 1
+        self.title = title
+        self.author = author
+        self.genre = genre
+        self.price = price
+        self.publisher_year = publisher_year
+        self.__rating=None
+        self.__review=None
+
+    def __str__(self):
+        rating_str = f"{self.__rating}/5.0" if self.__rating is not None else "No rating yet"
+        review_str = self.__review if self.__review else "No review yet"
+
+        return (
+            f"Book ID: {self.id}\n"
+            f"Title: {self.title}\n"
+            f"Author: {self.author}\n"
+            f"Genre: {self.genre}\n"
+            f"Price: {self.price}\n"
+            f"Publisher Year: {self.publisher_year}\n"
+            f"Rating: {rating_str}\n"
+            f"Review: {review_str}"
+        )
+    
+
+    def set_rating(self, rating):
+        if 0 <= rating <= 5:
+            self.__rating = rating
+            return True
+        return False
+
+    def set_review(self, review):
+        if review.strip():
+            self.__review = review
+            return True
+        return False
+
+    def get_rating(self):
+        if self.__rating is not None:
+            return f"{self.__rating}/5.0"
+        return "No rating yet"
+
+    def get_review(self):
+        if self.__review:
+            return self.__review
+        else:
+            return "No review yet"
+
+class Library:
+    def __init__(self):
+        self.books=[]
+
+    def add_book(self, b):
+        self.books.append(b)
+        return "Book added successfully!"
+
+    def remove_book_by_id(self, id):
+        for book in self.books:
+            if book.id == id:
+                self.books.remove(book)
+                return "Book removed successfully!"
+        return "Book not found."
+
+    def display_books(self):
+        if len(self.books)==0:
+            return "No books in the library."
+        result = ""
+        for book in self.books:
+            result += str(book) + "\n\n"
+        return result
+
+    def search_books_by_author(self, author):
+        result = ""
+        found = False
+        for book in self.books:
+            if book.author.strip().lower() == author.strip().lower():
+                result += str(book) + "\n\n"
+                found = True
+        if not found:
+            return "No books found by this author."
+        return result
+
+    def search_books_by_title(self, title):
+        for book in self.books:
+            if book.title.strip().lower() == title.strip().lower():
+                return book
+        return None
+
+    def search_books_by_genre(self, genre):
+        result = ""
+        found = False
+        for book in self.books:
+            if book.genre.strip().lower() == genre.strip().lower():
+                result += str(book) + "\n\n"
+                found = True
+        if not found:
+            return "No books found in this genre."
+        return result
+
+    def display_books_sorted_by_year(self):
+        if len(self.books)==0:
+            return "No books in the library."
+        sorted_books = sorted(self.books, key=lambda x:x.publisher_year)
+        result = ""
+        for book in sorted_books:
+            result += str(book) + "\n\n"
+        return result
+
+    def display_books_sorted_by_price(self):
+        if len(self.books)==0:
+            return "No books in the library."
+        sorted_books = sorted(self.books, key=lambda x:x.price, reverse=True)
+        result = ""
+        for book in sorted_books:
+            result += str(book) + "\n\n"
+        return result
+
+    def display_books_sorted_by_rating(self):
+        if len(self.books) == 0:
+            return "No books in the library."
+
+        def rating_value(book):
+            if book.get_rating() == "No rating yet":
+                return 0
+            return float(book.get_rating().split("/")[0])
+            
+        sorted_books = sorted(self.books, key=rating_value, reverse=True)
+        result = ""
+        for book in sorted_books:
+            result += str(book) + "\n\n"
+        return result
+
+    def display_books_sorted_by_author(self):
+        if len(self.books)==0:
+            return "No books in the library."
+        sorted_books = sorted(self.books, key=lambda x:x.author)
+        result = ""
+        for book in sorted_books:
+            result += str(book) + "\n\n"
+        return result
+
+    def display_books_sorted_by_title(self):
+        if len(self.books)==0:
+            return "No books in the library."
+        sorted_books = sorted(self.books, key=lambda x:x.title)
+        result = ""
+        for book in sorted_books:
+            result += str(book) + "\n\n"
+        return result
+
+    def save_to_file(self, filename):
+        try:
+            with open(filename, "w", encoding="utf-8") as f:
+                for book in self.books:
+                    f.write(f"{book.title},{book.author},{book.genre},{book.price},{book.publisher_year}\n")
+            return "Books saved successfully!"
+        except Exception as e:
+            return f"Error saving file: {str(e)}"
+
+    def load_from_file(self, filename):
+        try:
+            if not os.path.exists(filename):
+                return "File not found."
+                
+            with open(filename, "r", encoding="utf-8") as f:
+                self.books = []
+                for line in f:
+                    if line.strip():
+                        data = line.strip().split(",")
+                        if len(data) == 5:
+                            title, author, genre, price, publisher_year = data
+                            book = Book(title, author, genre, float(price), int(publisher_year))
+                            self.add_book(book)
+            return "Books loaded successfully!"
+        except Exception as e:
+            return f"Error loading file: {str(e)}"
+
+# Tkinter GUI Application
+class LibraryApp:
+    def __init__(self, root):
+        self.root = root
+        self.root.title("Personal Library Management System")
+        self.root.geometry("1000x700")
+        self.root.configure(bg='#f0f0f0')
+        
+        self.library = Library()
+        
+        # Create main frames
+        self.left_frame = ttk.Frame(root, padding="10")
+        self.left_frame.grid(row=0, column=0, sticky=(tk.W, tk.E, tk.N, tk.S), padx=5, pady=5)
+        
+        self.right_frame = ttk.Frame(root, padding="10")
+        self.right_frame.grid(row=0, column=1, sticky=(tk.W, tk.E, tk.N, tk.S), padx=5, pady=5)
+        
+        # Configure grid weights
+        root.columnconfigure(0, weight=1)
+        root.columnconfigure(1, weight=2)
+        root.rowconfigure(0, weight=1)
+        
+        self.left_frame.columnconfigure(0, weight=1)
+        self.right_frame.columnconfigure(0, weight=1)
+        self.right_frame.rowconfigure(1, weight=1)
+        
+        # Create widgets
+        self.create_left_panel()
+        self.create_right_panel()
+        
+    def create_left_panel(self):
+        # Add Book Section
+        add_frame = ttk.LabelFrame(self.left_frame, text="Add New Book", padding="10")
+        add_frame.grid(row=0, column=0, sticky=(tk.W, tk.E, tk.N), pady=5)
+        add_frame.columnconfigure(1, weight=1)
+        
+        ttk.Label(add_frame, text="Title:").grid(row=0, column=0, sticky=tk.W, pady=2)
+        self.title_entry = ttk.Entry(add_frame, width=25)
+        self.title_entry.grid(row=0, column=1, sticky=(tk.W, tk.E), pady=2, padx=5)
+        
+        ttk.Label(add_frame, text="Author:").grid(row=1, column=0, sticky=tk.W, pady=2)
+        self.author_entry = ttk.Entry(add_frame, width=25)
+        self.author_entry.grid(row=1, column=1, sticky=(tk.W, tk.E), pady=2, padx=5)
+        
+        ttk.Label(add_frame, text="Genre:").grid(row=2, column=0, sticky=tk.W, pady=2)
+        self.genre_entry = ttk.Entry(add_frame, width=25)
+        self.genre_entry.grid(row=2, column=1, sticky=(tk.W, tk.E), pady=2, padx=5)
+        
+        ttk.Label(add_frame, text="Price:").grid(row=3, column=0, sticky=tk.W, pady=2)
+        self.price_entry = ttk.Entry(add_frame, width=25)
+        self.price_entry.grid(row=3, column=1, sticky=(tk.W, tk.E), pady=2, padx=5)
+        
+        ttk.Label(add_frame, text="Year:").grid(row=4, column=0, sticky=tk.W, pady=2)
+        self.year_entry = ttk.Entry(add_frame, width=25)
+        self.year_entry.grid(row=4, column=1, sticky=(tk.W, tk.E), pady=2, padx=5)
+        
+        ttk.Button(add_frame, text="Add Book", command=self.add_book).grid(row=5, column=0, columnspan=2, pady=10)
+        
+        # Search Section
+        search_frame = ttk.LabelFrame(self.left_frame, text="Search Books", padding="10")
+        search_frame.grid(row=1, column=0, sticky=(tk.W, tk.E, tk.N), pady=5)
+        search_frame.columnconfigure(1, weight=1)
+        
+        ttk.Label(search_frame, text="Search by:").grid(row=0, column=0, sticky=tk.W, pady=2)
+        self.search_type = ttk.Combobox(search_frame, values=["Title", "Author", "Genre"], state="readonly", width=22)
+        self.search_type.grid(row=0, column=1, sticky=(tk.W, tk.E), pady=2, padx=5)
+        self.search_type.current(0)
+        
+        ttk.Label(search_frame, text="Search term:").grid(row=1, column=0, sticky=tk.W, pady=2)
+        self.search_entry = ttk.Entry(search_frame, width=25)
+        self.search_entry.grid(row=1, column=1, sticky=(tk.W, tk.E), pady=2, padx=5)
+        
+        ttk.Button(search_frame, text="Search", command=self.search_books).grid(row=2, column=0, columnspan=2, pady=10)
+        
+        # Sort Section
+        sort_frame = ttk.LabelFrame(self.left_frame, text="Sort Books", padding="10")
+        sort_frame.grid(row=2, column=0, sticky=(tk.W, tk.E, tk.N), pady=5)
+        
+        sort_options = ["Year", "Price", "Rating", "Author", "Title"]
+        for i, option in enumerate(sort_options):
+            ttk.Button(sort_frame, text=f"Sort by {option}", 
+                      command=lambda o=option: self.sort_books(o)).grid(row=i//2, column=i%2, sticky=(tk.W, tk.E), padx=5, pady=2)
+        
+        # File Operations Section
+        file_frame = ttk.LabelFrame(self.left_frame, text="File Operations", padding="10")
+        file_frame.grid(row=3, column=0, sticky=(tk.W, tk.E, tk.N), pady=5)
+        file_frame.columnconfigure(1, weight=1)
+        
+        ttk.Label(file_frame, text="Filename:").grid(row=0, column=0, sticky=tk.W, pady=2)
+        self.filename_entry = ttk.Entry(file_frame, width=25)
+        self.filename_entry.grid(row=0, column=1, sticky=(tk.W, tk.E), pady=2, padx=5)
+        self.filename_entry.insert(0, "library.txt")
+        
+        ttk.Button(file_frame, text="Load from File", command=self.load_from_file).grid(row=1, column=0, columnspan=2, pady=5)
+        ttk.Button(file_frame, text="Save to File", command=self.save_to_file).grid(row=2, column=0, columnspan=2, pady=5)
+        
+        # Rating & Review Section
+        rating_frame = ttk.LabelFrame(self.left_frame, text="Rating & Review", padding="10")
+        rating_frame.grid(row=4, column=0, sticky=(tk.W, tk.E, tk.N), pady=5)
+        rating_frame.columnconfigure(1, weight=1)
+        
+        ttk.Label(rating_frame, text="Book Title:").grid(row=0, column=0, sticky=tk.W, pady=2)
+        self.rating_title_entry = ttk.Entry(rating_frame, width=25)
+        self.rating_title_entry.grid(row=0, column=1, sticky=(tk.W, tk.E), pady=2, padx=5)
+        
+        ttk.Label(rating_frame, text="Rating (0-5):").grid(row=1, column=0, sticky=tk.W, pady=2)
+        self.rating_entry = ttk.Spinbox(rating_frame, from_=0, to=5, increment=0.1, width=23)
+        self.rating_entry.grid(row=1, column=1, sticky=(tk.W, tk.E), pady=2, padx=5)
+        
+        ttk.Label(rating_frame, text="Review:").grid(row=2, column=0, sticky=tk.W, pady=2)
+        self.review_entry = ttk.Entry(rating_frame, width=25)
+        self.review_entry.grid(row=2, column=1, sticky=(tk.W, tk.E), pady=2, padx=5)
+        
+        ttk.Button(rating_frame, text="Set Rating & Review", command=self.set_rating_review).grid(row=3, column=0, columnspan=2, pady=5)
+        ttk.Button(rating_frame, text="Get Rating & Review", command=self.get_rating_review).grid(row=4, column=0, columnspan=2, pady=5)
+        
+        # Remove Book Section
+        remove_frame = ttk.LabelFrame(self.left_frame, text="Remove Book", padding="10")
+        remove_frame.grid(row=5, column=0, sticky=(tk.W, tk.E, tk.N), pady=5)
+        remove_frame.columnconfigure(1, weight=1)
+        
+        ttk.Label(remove_frame, text="Book ID:").grid(row=0, column=0, sticky=tk.W, pady=2)
+        self.remove_id_entry = ttk.Entry(remove_frame, width=25)
+        self.remove_id_entry.grid(row=0, column=1, sticky=(tk.W, tk.E), pady=2, padx=5)
+        
+        ttk.Button(remove_frame, text="Remove Book", command=self.remove_book).grid(row=1, column=0, columnspan=2, pady=5)
+        
+        # Display All Books Button
+        ttk.Button(self.left_frame, text="Display All Books", command=self.display_all_books).grid(row=6, column=0, pady=10)
+        
+    def create_right_panel(self):
+        # Output display
+        ttk.Label(self.right_frame, text="Library Contents", font=('Arial', 12, 'bold')).grid(row=0, column=0, sticky=tk.W)
+        
+        self.output_text = scrolledtext.ScrolledText(self.right_frame, width=70, height=30, wrap=tk.WORD)
+        self.output_text.grid(row=1, column=0, sticky=(tk.W, tk.E, tk.N, tk.S), pady=5)
+        
+        # Status bar
+        self.status_var = tk.StringVar()
+        self.status_var.set("Ready")
+        status_bar = ttk.Label(self.right_frame, textvariable=self.status_var, relief=tk.SUNKEN, anchor=tk.W)
+        status_bar.grid(row=2, column=0, sticky=(tk.W, tk.E))
+        
+    def add_book(self):
+        title = self.title_entry.get()
+        author = self.author_entry.get()
+        genre = self.genre_entry.get()
+        
+        try:
+            price = float(self.price_entry.get())
+            year = int(self.year_entry.get())
+        except ValueError:
+            messagebox.showerror("Error", "Price must be a number and Year must be an integer")
+            return
+            
+        if not all([title, author, genre]):
+            messagebox.showerror("Error", "Please fill in all fields")
+            return
+            
+        book = Book(title, author, genre, price, year)
+        result = self.library.add_book(book)
+        self.status_var.set(result)
+        self.clear_entries([self.title_entry, self.author_entry, self.genre_entry, self.price_entry, self.year_entry])
+        
+    def remove_book(self):
+        try:
+            book_id = int(self.remove_id_entry.get())
+        except ValueError:
+            messagebox.showerror("Error", "Book ID must be an integer")
+            return
+            
+        result = self.library.remove_book_by_id(book_id)
+        self.status_var.set(result)
+        self.remove_id_entry.delete(0, tk.END)
+        
+    def display_all_books(self):
+        result = self.library.display_books()
+        self.output_text.delete(1.0, tk.END)
+        self.output_text.insert(tk.END, result)
+        self.status_var.set("Displayed all books")
+        
+    def search_books(self):
+        search_type = self.search_type.get()
+        search_term = self.search_entry.get()
+        
+        if not search_term:
+            messagebox.showerror("Error", "Please enter a search term")
+            return
+            
+        if search_type == "Title":
+            result = self.library.search_books_by_title(search_term)
+            if result is None:
+                self.output_text.delete(1.0, tk.END)
+                self.output_text.insert(tk.END, "Book not found")
+            else:
+                self.output_text.delete(1.0, tk.END)
+                self.output_text.insert(tk.END, str(result))
+        elif search_type == "Author":
+            result = self.library.search_books_by_author(search_term)
+            self.output_text.delete(1.0, tk.END)
+            self.output_text.insert(tk.END, result)
+        elif search_type == "Genre":
+            result = self.library.search_books_by_genre(search_term)
+            self.output_text.delete(1.0, tk.END)
+            self.output_text.insert(tk.END, result)
+            
+        self.status_var.set(f"Searched by {search_type}: {search_term}")
+        
+    def sort_books(self, sort_type):
+        if sort_type == "Year":
+            result = self.library.display_books_sorted_by_year()
+        elif sort_type == "Price":
+            result = self.library.display_books_sorted_by_price()
+        elif sort_type == "Rating":
+            result = self.library.display_books_sorted_by_rating()
+        elif sort_type == "Author":
+            result = self.library.display_books_sorted_by_author()
+        elif sort_type == "Title":
+            result = self.library.display_books_sorted_by_title()
+            
+        self.output_text.delete(1.0, tk.END)
+        self.output_text.insert(tk.END, result)
+        self.status_var.set(f"Sorted by {sort_type}")
+        
+    def save_to_file(self):
+        filename = self.filename_entry.get()
+        if not filename:
+            messagebox.showerror("Error", "Please enter a filename")
+            return
+            
+        result = self.library.save_to_file(filename)
+        self.status_var.set(result)
+        
+    def load_from_file(self):
+        filename = self.filename_entry.get()
+        if not filename:
+            messagebox.showerror("Error", "Please enter a filename")
+            return
+            
+        result = self.library.load_from_file(filename)
+        self.status_var.set(result)
+        
+    def set_rating_review(self):
+        title = self.rating_title_entry.get()
+        if not title:
+            messagebox.showerror("Error", "Please enter a book title")
+            return
+            
+        book = self.library.search_books_by_title(title)
+        if book is None:
+            messagebox.showerror("Error", "Book not found")
+            return
+            
+        try:
+            rating = float(self.rating_entry.get())
+            if not 0 <= rating <= 5:
+                raise ValueError("Rating must be between 0 and 5")
+        except ValueError:
+            messagebox.showerror("Error", "Rating must be a number between 0 and 5")
+            return
+            
+        review = self.review_entry.get()
+        if not review:
+            messagebox.showerror("Error", "Please enter a review")
+            return
+            
+        book.set_rating(rating)
+        book.set_review(review)
+        self.status_var.set(f"Rating and review set for '{title}'")
+        self.clear_entries([self.rating_title_entry, self.rating_entry, self.review_entry])
+        
+    def get_rating_review(self):
+        title = self.rating_title_entry.get()
+        if not title:
+            messagebox.showerror("Error", "Please enter a book title")
+            return
+            
+        book = self.library.search_books_by_title(title)
+        if book is None:
+            messagebox.showerror("Error", "Book not found")
+            return
+            
+        rating = book.get_rating()
+        review = book.get_review()
+        
+        self.output_text.delete(1.0, tk.END)
+        self.output_text.insert(tk.END, f"Title: {title}\nRating: {rating}\nReview: {review}")
+        self.status_var.set(f"Retrieved rating and review for '{title}'")
+        
+    def clear_entries(self, entries):
+        for entry in entries:
+            entry.delete(0, tk.END)
+
+def main():
+    root = tk.Tk()
+    app = LibraryApp(root)
+    root.mainloop()
+
+if __name__ == "__main__":
+    main()
